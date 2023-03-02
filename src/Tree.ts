@@ -11,7 +11,37 @@
     both messages are traveling and not arrived
     at a point in time, user a receives the message and user b receives the message
 
+    [1,1][1,2][[2,3]
+    [1,1][1,3]
+    [2,1]
 
+    [1,1][1,2][2,3]
+    [1,1][1,2][2,3][1,1]
+    [2,1]
+
+    [1,1][1,2][2,3]
+    [1,1][1,2][2,3][1,5]
+    [1,1][1,2][2,4]
+
+    [1,1][1,2][2,3]
+
+    [1,1][1,2][2,3]
+    [1,1][1,2][2,3][1,5]
+    [1,1][1,2][3,3]
+
+    [1,1]
+    [1,1][1,4]
+    [1,3]
+
+    [1,1][2,1][3,1]
+    [1,1][1,2]
+    [1,1][2,1][3,3]
+
+    [1,1]
+    [1,2]
+    [1,2][3,5]
+    [2,3]
+    [2,3][1,2]
 */
 
 export type Comparator = 1 | -1 | 0;
@@ -22,6 +52,36 @@ export interface Atom {
     data: string;
     pid: positionDigit[];
     clock: number;
+}
+
+const allocateId = (id1: number[], id2: number[]): number[] => {
+    return []
+}
+
+const generateId = (id1: positionDigit[], id2: positionDigit[], curIndex=0,siteId:number) => {
+    const head1 = id1[curIndex];
+    const head2 = id2[curIndex];
+    const siteId1 = head1.siteId;
+    const siteId2 = head2.siteId;
+    const index1 = head1.index;
+    const index2 = head2.index;
+    if(index1 < index2){
+        if(siteId > id1[curIndex].siteId){
+
+        }else{
+
+        }
+    }else if(index1 === index2){
+        if(siteId1 === siteId1){
+            generateId(id1, id2, ++curIndex, siteId)
+        }else if(siteId1 < siteId2){
+            //allocateId() from id1 to infinity
+        }else{
+            throw Error("invalid id order!")
+        }
+    }else{
+
+    }
 }
 
 export const init = 0;
@@ -44,18 +104,17 @@ const compareIds = (
     const siteId2 = head2.siteId;
     const index1 = head1.index;
     const index2 = head2.index;
-    if (siteId1 > siteId2) {
+    if(index1 > index2){
         return 1;
-    } else if (siteId1 < siteId2) {
+    }else if(index1 < index2){
         return -1;
-    } else {
-        if (index1 > index2) {
+    }else{
+        if(siteId1 > siteId2){
             return 1;
-        } else if (index1 < index2) {
+        }else if(siteId1 < siteId2){
             return -1;
-        } else {
-            curIndex++;
-            return compareIds(id1, id2);
+        }else{
+            return compareIds(id1, id2, ++curIndex)
         }
     }
 };
