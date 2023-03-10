@@ -66,7 +66,7 @@ class Tree {
 
 export type Comparator = 1 | -1 | 0;
 
-export type positionDigit = { index: number; siteId: number };
+export type positionDigit = { position: number; siteId: number };
 
 export interface Atom {
     data: string;
@@ -125,8 +125,8 @@ const generateId = (id1: positionDigit[], id2: positionDigit[], siteId: number) 
         head2 = id2[i];
         siteId1 = head1.siteId;
         siteId2 = head2.siteId;
-        index1 = head1.index;
-        index2 = head2.index;
+        index1 = head1.position;
+        index2 = head2.position;
         if (index2 - index1 > 1) {
             if (siteId > siteId1) {
                 if (siteId < siteId2) {
@@ -192,8 +192,8 @@ const compareIds = (id1: positionDigit[], id2: positionDigit[], curIndex = 0): C
     const head2 = id2[curIndex];
     const siteId1 = head1.siteId;
     const siteId2 = head2.siteId;
-    const index1 = head1.index;
-    const index2 = head2.index;
+    const index1 = head1.position;
+    const index2 = head2.position;
     if (index1 > index2) {
         return 1;
     } else if (index1 < index2) {
