@@ -180,7 +180,7 @@ const generateId = (id1: positionDigit[], id2: positionDigit[], siteId: number) 
 
 export const init = 0;
 
-const compareIds = (id1: positionDigit[], id2: positionDigit[], curIndex = 0): Comparator => {
+export const compareIds = (id1: positionDigit[], id2: positionDigit[], curIndex = 0): Comparator => {
     if (curIndex >= id1.length && curIndex < id2.length) {
         return -1;
     } else if (curIndex < id1.length && curIndex >= id2.length) {
@@ -208,6 +208,10 @@ const compareIds = (id1: positionDigit[], id2: positionDigit[], curIndex = 0): C
         }
     }
 };
+
+export const compareAtoms = (atom1: Atom, atom2: Atom) => {
+    return compareIds(atom1.pid, atom2.pid)
+}
 
 Object.defineProperty(Array.prototype, "binarySearch", {
     value: function (target: any, comparator: Function) {
@@ -240,7 +244,7 @@ Object.defineProperty(Array.prototype, "binaryInsert", {
         var i = this.binarySearch(target, comparator);
         if (i >= 0) {
             if (!duplicate) {
-                return i;
+                throw Error("duplicate element")
             }
         } else {
             i = ~i;
