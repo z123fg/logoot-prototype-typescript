@@ -84,6 +84,7 @@ export const generateId = (id1: positionDigit[], id2: positionDigit[], siteId: n
     for (let i = 0; i < Math.min(length1, length2); i++) {
         const comparison = compareDigit(id1[i], id2[i]);
         if (comparison === 1) {
+            console.log("invalid position order", id1, id2, siteId)
             throw Error("invalid position order!");
         } else if (comparison === -1) {
             return [...id1.slice(0, i), ...allocateId(id1.slice(i), id2.slice(i), siteId)];
@@ -93,6 +94,7 @@ export const generateId = (id1: positionDigit[], id2: positionDigit[], siteId: n
         }
     }
     if (length1 > length2) {
+        console.log("invalid position order", id1, id2, siteId)
         throw Error("invalid position order");
     } else if (length2 > length1) {
         return [

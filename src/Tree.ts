@@ -245,7 +245,8 @@ Object.defineProperty(Array.prototype, "binaryInsert", {
         if (i >= 0) {
             if (!duplicate) {
                 console.log("duplicate", target,this)
-                throw Error("duplicate element")
+                return;
+                //throw Error("duplicate element")
             }
         } else {
             i = ~i;

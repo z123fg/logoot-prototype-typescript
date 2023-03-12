@@ -17,17 +17,17 @@ const tail = { data: "tail", pid: [{ position: BASE, siteId: Infinity }], clock:
 const applyMessage = (model: Atom[], message: Message) => {
     const newModel = [...model];
     if (message.type === "insert") {
-        console.log("tobeinsert", message.atom, newModel);
+        //console.log("tobeinsert", message.atom, newModel);
         //@ts-ignore
         newModel.binaryInsert(message.atom, false, compareAtoms);
-        console.log("afterinsert", newModel);
+        //console.log("afterinsert", newModel);
         //console.log("from siteId insert", model);
         return newModel;
     } else if (message.type === "delete") {
         //@ts-ignore
         let removeIndex = newModel.binarySearch(message.atom, compareAtoms);
         removeIndex = removeIndex < 0 ? -1 : removeIndex;
-        console.log("toberemoved", removeIndex, message.atom, newModel);
+        //console.log("toberemoved", removeIndex, message.atom, newModel);
         return newModel.filter((item, index) => {
             return index !== removeIndex;
         });
@@ -47,18 +47,20 @@ const compareMessageClock = (message1: Message, message2: Message) => {
     }
 };
 
+const tick = performance.now();
+
 const ControlledInput = ({
     siteId,
     emit,
-    message,
-    nullifyMessage,
-    reportValue
+    messageQueue,
+    reportValue,
+    popMessage,
 }: {
     siteId: number;
     emit: Function;
-    message: Message | null;
-    nullifyMessage: Function;
-    reportValue:Function
+    messageQueue: Message[];
+    reportValue: Function;
+    popMessage: Function;
 }) => {
     const [model, setModel] = useState<Atom[]>([head, tail]);
     const [value, setValue] = useState<string>("");
@@ -66,72 +68,64 @@ const ControlledInput = ({
     const [curCaret, setCurCaret] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const prettyPrintRef = useRef<HTMLDivElement>(null);
-    const lamportClock = useRef<number>(0);
-    const messageCache = useRef<Message[]>([]);
+    const localClock = useRef<number>(0);
+    const remoteClock = useRef<{ [siteId: number]: number }>({});
+    const scheduledMessages = useRef<{ [siteId: number]: Message[] }>({});
+    const messageListForPrint = useRef<Message[]>([]);
+
+    const [trigger, forceUpdate] = useState({});
 
     useEffect(() => {
-        if (message !== null) {
-            let newModel = [...model];
-            const curClock = message.atom.clock;
-            if (curClock - lamportClock.current > 1) {
-                console.log(
-                    "cache",
-                    "siteId"+
-                    siteId,
-                    "type:",
-                    message.type,
-                    "data:",
-                    message.atom.data,
-                    "atomclock:",
-                    message.atom.clock,
-                    "clock:",
-                    lamportClock.current
-                );
-                //@ts-ignore
-                messageCache.current.binaryInsert(message, true, compareMessageClock);
-            } else {
-                console.log(
-                    "non cache",
-                    "siteId"+
-                    siteId,
-                    "type:",
-                    message.type,
-                    "data:",
-                    message.atom.data,
-                    "atomclock:",
-                    message.atom.clock,
-                    "clock:",
-                    lamportClock.current
-                );
-                lamportClock.current = Math.max(lamportClock.current, curClock);
-                newModel = applyMessage(newModel, message);
-                messageCache.current = messageCache.current.filter((curMessage) => {
-                    if (curMessage.atom.clock - lamportClock.current <= 1) {
-                        console.log(
-                            "popCache",
-                            siteId,
-                            "type:",
-                            curMessage.type,
-                            "data:",
-                            curMessage.atom.data,
-                            "atomclock:",
-                            curMessage.atom.clock,
-                            "clock:",
-                            lamportClock.current
-                        );
-                        newModel = applyMessage(newModel, curMessage);
-                        lamportClock.current = Math.max(lamportClock.current, curMessage.atom.clock);
-                        return false;
-                    }
-                    return true;
-                });
+        if (messageQueue.length === 0) return;
+        popMessage(siteId, (message: Message) => {
+            console.log("pop?")
+            const messageClock = message.atom.clock;
+            const messageSiteId = message.siteId;
+            console.log(
+                "onReceiveMessage",
+                siteId,
+                message.atom.clock,
+                message.atom.data,
+                remoteClock.current[messageSiteId],
+                performance.now() - tick
+            );
 
-                setModel(newModel);
+            if (!(messageSiteId in scheduledMessages.current)) {
+                scheduledMessages.current[messageSiteId] = [];
             }
+            if (remoteClock.current[messageSiteId] === undefined) {
+                remoteClock.current[messageSiteId] = 0;
+            }
+            if (messageClock > remoteClock.current[messageSiteId] + 1) {
+                //@ts-ignore
+                scheduledMessages.current[messageSiteId].binaryInsert(message, false, compareMessageClock);
+                return;
+            } else if (messageClock === remoteClock.current[messageSiteId] + 1) {
+                remoteClock.current[messageSiteId]++;
+            } else {
+                console.log("old received");
+                return;
+            }
+            setModel((prev) => {
+                let nextModel: Atom[];
+                nextModel = applyMessage(prev, message);
+                scheduledMessages.current[messageSiteId] = scheduledMessages.current[messageSiteId].filter(
+                    (futureMessage) => {
+                        if (futureMessage.atom.clock === remoteClock.current[messageSiteId] + 1) {
+                            remoteClock.current[messageSiteId]++;
+                            nextModel = applyMessage(nextModel, futureMessage);
+                            return false;
+                        }
+                        return true;
+                    }
+                );
+                //nullifyMessage(siteId);
+                return nextModel;
+            });
+        });
+    }, [messageQueue]);
 
-            nullifyMessage(siteId);
-        }
-    }, [message, model]);
+    useEffect(() => {}, [model]);
 
     useEffect(() => {
         setValue(
@@ -140,21 +134,25 @@ const ControlledInput = ({
                 .map((atom) => atom.data)
                 .join("")
         );
+        //@ts-ignore
+        //if (message !== null) messageListForPrint.current.binaryInsert(message, false, compareMessageClock);
         prettyPrint(
             prettyPrintRef.current!,
             model.map((atom) => [atom.data, ...atom.pid.map((digit) => Object.values(digit))]),
-            messageCache
+            scheduledMessages.current,
+            remoteClock.current,
+            messageListForPrint.current
         );
-    }, [model, messageCache.current]);
+    }, [model, scheduledMessages.current, trigger, messageQueue]);
 
     useEffect(() => {
         inputRef.current!.selectionStart = curCaret;
         inputRef.current!.selectionEnd = curCaret;
     }, [value, curCaret]);
 
-    useEffect(()=>{
-        reportValue(siteId, value)
-    },[value])
+    useEffect(() => {
+        reportValue(siteId, value);
+    }, [value]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         let caret: number;
@@ -163,28 +161,36 @@ const ControlledInput = ({
             caret = inputEl.selectionStart as number;
             const position = caret + 1;
             setCurCaret(inputEl.selectionStart as number);
-            console.log("backspace", "siteId"+siteId, position, model)
+            //console.log("backspace", "siteId" + siteId, position, model);
             setModel((prev) => [...prev.slice(0, position), ...prev.slice(position + 1)]);
-            lamportClock.current++;
-            const deleteAtom = { ...model[position], clock: lamportClock.current };
-            const message = {
+
+            localClock.current++;
+
+            const deleteAtom: Atom = { ...model[position], clock: localClock.current };
+            console.log("onChange", deleteAtom.clock, deleteAtom.data);
+            const message: Message = {
                 type: "delete",
                 atom: deleteAtom,
+                siteId,
             };
+
             emit(message, siteId);
         } else {
             caret = (inputEl.selectionStart as number) - 1;
             setCurCaret(inputEl.selectionStart as number);
             const position = caret + 1;
-            lamportClock.current++;
-            const newAtom = {
+            localClock.current++;
+
+            const newAtom: Atom = {
                 data: curKey,
                 pid: generateId(model[position - 1].pid, model[position].pid, siteId),
-                clock: lamportClock.current,
+                clock: localClock.current,
             };
-            const message = {
+            //console.log("onChange", newAtom.clock, newAtom.data);
+            const message: Message = {
                 type: "insert",
                 atom: newAtom,
+                siteId,
             };
             emit(message, siteId);
 

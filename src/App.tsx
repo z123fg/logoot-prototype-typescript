@@ -9,14 +9,15 @@ const siteIds = [1, 2];
 export interface Message {
     type: "insert" | "delete";
     atom: Atom;
+    siteId: number;
 }
 interface MessageBox {
-    [siteId: number]: Message | null;
+    [siteId: number]: Message[];
 }
 
 function App() {
     const [messageBox, setMessageBox] = useState<MessageBox>(
-        Object.fromEntries(siteIds.map((siteId) => [siteId, null]))
+        Object.fromEntries(siteIds.map((siteId) => [siteId, []]))
     );
 
     const [values, setValues] = useState<{ [siteId: number]: string }>(
@@ -39,32 +40,57 @@ function App() {
     };
 
     const emit = (newMessage: Message, siteId: number) => {
-        const curSiteId = siteId;
-        const entries = Object.entries(messageBox).map(([siteId, message]) => {
-            if (+siteId !== curSiteId) {
-                return [siteId, { ...newMessage }];
-            }
-            return [siteId, message];
-        });
+        console.log("emit", siteId, newMessage.atom.clock, newMessage.atom.data);
+
         setTimeout(() => {
-            setMessageBox(Object.fromEntries(entries));
-        }, Math.random() * 6000);
+            const curSiteId = siteId;
+
+            setMessageBox((prev) => {
+                const entries = Object.entries(prev).map(([siteId, curMessageQueue]) => {
+                    if (+siteId !== curSiteId) {
+                        return [siteId, [ newMessage, ...curMessageQueue ]];
+                    }
+                    return [siteId, curMessageQueue];
+                });
+                const nextMessageBox = Object.fromEntries(entries);
+                //console.log("innerEmit", siteId, newMessage.atom.clock, newMessage.atom.data, nextMessageBox);
+                return nextMessageBox;
+            });
+        }, Math.random() * 2200);
     };
 
-    const nullifyMessage = (siteId: number) => {
+    /* const nullifyMessage = (siteId: number) => {
         setMessageBox((prev) => ({ ...prev, [siteId]: null }));
+    }; */
+    const popMessage = (siteId: number, cb: Function) => {
+        setMessageBox((prev) => {
+            const nextMessageBox = { ...prev };
+            const recur = () => {
+                const curMessage = nextMessageBox[siteId][nextMessageBox[siteId].length - 1];
+                console.log("pop1",nextMessageBox[siteId])
+                nextMessageBox[siteId] = nextMessageBox[siteId].slice(0, nextMessageBox[siteId].length - 1);
+                cb(curMessage);
+                if(nextMessageBox[siteId].length > 0){
+                    recur()
+                }
+            };
+            recur();
+
+            return nextMessageBox;
+        });
     };
     return (
-        <div style={{textAlign:"center"}}>
+        <div style={{ textAlign: "center" }}>
             <h2>{areSame ? "SAME" : "DIFFERENT"}</h2>
             <div className="app">
                 {siteIds.map((siteId) => (
                     <ControlledInput
                         key={siteId}
                         siteId={siteId}
-                        message={messageBox[siteId]}
+                        messageQueue={messageBox[siteId]}
                         emit={emit}
-                        nullifyMessage={nullifyMessage}
+                        //nullifyMessage={nullifyMessage}
+                        popMessage={popMessage}
                         reportValue={reportValue}
                     />
                 ))}
