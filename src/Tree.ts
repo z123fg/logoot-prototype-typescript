@@ -244,6 +244,7 @@ Object.defineProperty(Array.prototype, "binaryInsert", {
         var i = this.binarySearch(target, comparator);
         if (i >= 0) {
             if (!duplicate) {
+                console.log("duplicate", target,this)
                 throw Error("duplicate element")
             }
         } else {
