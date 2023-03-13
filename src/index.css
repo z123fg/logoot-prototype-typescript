@@ -1,10 +1,19 @@
+*{
+  font-family:Arial, Helvetica, sans-serif
+}
 .doc{
   display: flex;
   flex-direction: column;
-  width: fit-content;
+  width: 500px;
+  height:500px
+}
+.doc textarea{
+  height: 500px;
+  font-size: 20px;
 }
 .app{
   display: flex;
   flex-direction: row;
-  justify-content: center
+  justify-content: center;
+  gap:30px
 }

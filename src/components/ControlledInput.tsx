@@ -66,7 +66,7 @@ const ControlledInput = ({
     const [value, setValue] = useState<string>("");
     const [curKey, setCurKey] = useState("");
     const [curCaret, setCurCaret] = useState(0);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     const prettyPrintRef = useRef<HTMLDivElement>(null);
     const localClock = useRef<number>(0);
     const remoteClock = useRef<{ [siteId: number]: number }>({});
@@ -78,7 +78,7 @@ const ControlledInput = ({
     useEffect(() => {
         if (messageQueue.length === 0) return;
         popMessage(siteId, (message: Message) => {
-            console.log("pop?")
+            console.log("pop?");
             const messageClock = message.atom.clock;
             const messageSiteId = message.siteId;
             console.log(
@@ -136,13 +136,13 @@ const ControlledInput = ({
         );
         //@ts-ignore
         //if (message !== null) messageListForPrint.current.binaryInsert(message, false, compareMessageClock);
-        prettyPrint(
+        /*  prettyPrint(
             prettyPrintRef.current!,
             model.map((atom) => [atom.data, ...atom.pid.map((digit) => Object.values(digit))]),
             scheduledMessages.current,
             remoteClock.current,
             messageListForPrint.current
-        );
+        ); */
     }, [model, scheduledMessages.current, trigger, messageQueue]);
 
     useEffect(() => {
@@ -154,7 +154,7 @@ const ControlledInput = ({
         reportValue(siteId, value);
     }, [value]);
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
         let caret: number;
         const inputEl = e.target;
         if (curKey === "Backspace") {
@@ -179,22 +179,29 @@ const ControlledInput = ({
             caret = (inputEl.selectionStart as number) - 1;
             setCurCaret(inputEl.selectionStart as number);
             const position = caret + 1;
-            localClock.current++;
+            /* let counter = 0;
+            console.log("counter1");
+            while (counter < 1000000000) {
+                counter++;
+            }
+            console.log("counter2"); */
+            setModel((prev) => {
+                localClock.current++;
 
-            const newAtom: Atom = {
-                data: curKey,
-                pid: generateId(model[position - 1].pid, model[position].pid, siteId),
-                clock: localClock.current,
-            };
-            //console.log("onChange", newAtom.clock, newAtom.data);
-            const message: Message = {
-                type: "insert",
-                atom: newAtom,
-                siteId,
-            };
-            emit(message, siteId);
-
-            setModel((prev) => [...prev.slice(0, position), newAtom, ...prev.slice(position)]);
+                const newAtom: Atom = {
+                    data: curKey,
+                    pid: generateId(prev[position - 1].pid, prev[position].pid, siteId),
+                    clock: localClock.current,
+                };
+                //console.log("onChange", newAtom.clock, newAtom.data);
+                const message: Message = {
+                    type: "insert",
+                    atom: newAtom,
+                    siteId,
+                };
+                emit(message, siteId);
+                return [...prev.slice(0, position), newAtom, ...prev.slice(position)];
+            });
         }
     };
     const handleKeydown = (e: KeyboardEvent) => {
@@ -202,7 +209,7 @@ const ControlledInput = ({
     };
     return (
         <div className="doc">
-            <input ref={inputRef} onChange={handleChange} onKeyDown={handleKeydown} value={value} />
+            <textarea ref={inputRef} onChange={handleChange} onKeyDown={handleKeydown} value={value}/>
             <span className="inspect" ref={prettyPrintRef}></span>
         </div>
     );

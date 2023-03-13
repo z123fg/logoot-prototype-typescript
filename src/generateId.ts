@@ -75,6 +75,7 @@ const allocateId = (id1: positionDigit[], id2: positionDigit[], siteId: number) 
     //if the last digit is 0, then add one more non-zero position digit
     if (result[result.length - 1].position === 0)
         result = [...result, { position: generatePosition(1, BASE), siteId }];
+
     return result;
 };
 
@@ -84,23 +85,39 @@ export const generateId = (id1: positionDigit[], id2: positionDigit[], siteId: n
     for (let i = 0; i < Math.min(length1, length2); i++) {
         const comparison = compareDigit(id1[i], id2[i]);
         if (comparison === 1) {
-            console.log("invalid position order", id1, id2, siteId)
+            console.log("invalid position order", id1, id2, siteId);
             throw Error("invalid position order!");
         } else if (comparison === -1) {
-            return [...id1.slice(0, i), ...allocateId(id1.slice(i), id2.slice(i), siteId)];
+            const newId = [...id1.slice(0, i), ...allocateId(id1.slice(i), id2.slice(i), siteId)];
+            console.log(
+                "allocateId",
+                id1,
+                id2,
+                newId.map((digit) => digit.position),
+                siteId
+            );
+            return newId;
             // id1.slice(i), id2.slice(i)
         } else {
             continue;
         }
     }
     if (length1 > length2) {
-        console.log("invalid position order", id1, id2, siteId)
+        console.log("invalid position order", id1, id2, siteId);
         throw Error("invalid position order");
     } else if (length2 > length1) {
-        return [
+        const newId = [
             ...id1,
             ...allocateId([{ position: 0, siteId: id1[length1 - 1].siteId }], id2.slice(length1), siteId),
         ];
+        console.log(
+            "allocateId",
+            id1,
+            id2,
+            newId.map((digit) => digit.position),
+            siteId
+        );
+        return newId;
         //undefined, id2.slice(length1)
     } else {
         //undefined, undefined
@@ -131,8 +148,22 @@ export const mockIds: [positionDigit[], positionDigit[], number][] = [
     [[{ position: 1, siteId: 1 }], [{ position: 2, siteId: 7 }], 6],
     [[{ position: 1, siteId: 8 }], [{ position: 2, siteId: 7 }], 6],
     [[{ position: 1, siteId: 8 }], [{ position: 2, siteId: 4 }], 6],
-    [[{ position: 1, siteId: 8 },{ position: 1, siteId: 8 }], [{ position: 2, siteId: 4 }], 6],
-    [[{ position: 1, siteId: 8 },{ position: 1, siteId: 8 }], [{ position: 1, siteId: 9 }], 6],
+    [
+        [
+            { position: 1, siteId: 8 },
+            { position: 1, siteId: 8 },
+        ],
+        [{ position: 2, siteId: 4 }],
+        6,
+    ],
+    [
+        [
+            { position: 1, siteId: 8 },
+            { position: 1, siteId: 8 },
+        ],
+        [{ position: 1, siteId: 9 }],
+        6,
+    ],
 ];
 export const prettyPrintId = (id: positionDigit[]) => {
     let string = "";

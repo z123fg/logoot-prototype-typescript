@@ -56,7 +56,7 @@ function App() {
                 //console.log("innerEmit", siteId, newMessage.atom.clock, newMessage.atom.data, nextMessageBox);
                 return nextMessageBox;
             });
-        }, Math.random() * 2200);
+        }, Math.random() * 2600);
     };
 
     /* const nullifyMessage = (siteId: number) => {
